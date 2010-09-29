@@ -48,6 +48,21 @@ struct KenLMState : public FFState {
 };
 } // namespace
 
+void LanguageModelKen::TranslateIDs(const std::vector<const Word*> &contextFactor, std::vector<lm::WordIndex> &indices) const
+{
+  FactorType factorType = GetFactorType();
+  indices.resize(contextFactor.size());
+	// set up context
+	for (size_t i = 0 ; i < contextFactor.size(); i++)
+	{
+		const Factor *factor = contextFactor[i]->GetFactor(factorType);
+		const string &word = factor->GetString();
+		
+		// TODO(hieuhoang1972): precompute this.   
+		indices[contextFactor.size() - 1 - i] = m_ngram->GetVocabulary().Index(word);
+	}
+}
+
 LanguageModelKen::LanguageModelKen(bool registerScore, ScoreIndexManager &scoreIndexManager)
 :LanguageModelSingleFactor(registerScore, scoreIndexManager), m_ngram(NULL)
 {
@@ -83,33 +98,35 @@ bool LanguageModelKen::Load(const std::string &filePath,
 	return true;
 }
 
-	/* get score of n-gram. n-gram should not be bigger than m_nGramOrder
-	 * Specific implementation can return State and len data to be used in hypothesis pruning
-	 * \param contextFactor n-gram to be scored
-	 * \param finalState state used by LM. Return arg
-	 * \param len ???
-	 */	
-float LanguageModelKen::GetValueAndState(const vector<const Word*> &contextFactor, FFState &outState, unsigned int* len) const
+float LanguageModelKen::GetValueGivenState(const std::vector<const Word*> &contextFactor, FFState &state, unsigned int* len) const
 {
-	FactorType factorType = GetFactorType();
-	size_t count = contextFactor.size();
-	assert(count <= GetNGramOrder());
-	if (count == 0)
+  lm::ngram::State &realState = static_cast<KenLMState&>(state).state;
+  if (contextFactor.empty())
+  {
+    realState = m_ngram->NullContextState();
+    return 0;
+  }
+  lm::WordIndex new_word = m_ngram->GetVocabulary().Index(contextFactor.back()->GetFactor(GetFactorType())->GetString());
+  lm::ngram::State copied(realState);
+  lm::FullScoreReturn ret(m_ngram->FullScore(copied, new_word, realState));
+
+	if (len)
+	{
+		*len = ret.ngram_length;
+	}
+	return TransformLMScore(ret.prob);
+}
+
+float LanguageModelKen::GetValueForgotState(const vector<const Word*> &contextFactor, FFState &outState, unsigned int* len) const
+{
+	if (contextFactor.empty())
 	{
 		static_cast<KenLMState&>(outState).state = m_ngram->NullContextState();
 		return 0;
 	}
 	
-	// set up context
-	vector<lm::WordIndex> ngramId(count);
-	for (size_t i = 0 ; i < count; i++)
-	{
-		const Factor *factor = contextFactor[i]->GetFactor(factorType);
-		const string &word = factor->GetString();
-		
-		// TODO(hieuhoang1972): precompute this.   
-		ngramId[count - 1 - i] = m_ngram->GetVocabulary().Index(word);
-	}
+	vector<lm::WordIndex> ngramId;
+  TranslateIDs(contextFactor, ngramId);
 
   lm::FullScoreReturn ret(m_ngram->FullScoreForgotState(&*ngramId.begin() + 1, &*ngramId.end(), ngramId.front(), static_cast<KenLMState&>(outState).state));
 	if (len)
@@ -117,6 +134,24 @@ float LanguageModelKen::GetValueAndState(const vector<const Word*> &contextFacto
 		*len = ret.ngram_length;
 	}
 	return TransformLMScore(ret.prob);
+}
+
+void LanguageModelKen::GetState(const std::vector<const Word*> &contextFactor, FFState &outState) const {
+  if (contextFactor.empty()) {
+    static_cast<KenLMState&>(outState).state = m_ngram->NullContextState();
+    return;
+  }
+  std::vector<lm::WordIndex> indices;
+  TranslateIDs(contextFactor, indices);
+  m_ngram->GetState(&*indices.begin(), &*indices.end(), static_cast<KenLMState&>(outState).state);
+}
+
+FFState *LanguageModelKen::NewState(const FFState *from) const {
+  KenLMState *ret = new KenLMState;
+  if (from) {
+    ret->state = static_cast<const KenLMState&>(*from).state;
+  }
+  return ret;
 }
 
 lm::WordIndex LanguageModelKen::GetLmID(const std::string &str) const {

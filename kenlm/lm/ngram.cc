@@ -1,6 +1,6 @@
 #include "lm/ngram.hh"
 
-#include "lm/exception.hh"
+#include "lm/lm_exception.hh"
 #include "lm/read_arpa.hh"
 #include "util/file_piece.hh"
 #include "util/joint_sort.hh"

@@ -232,7 +232,7 @@ void LanguageModelParallelBackoff::CreateFactors()
 		
 }
 
-	float LanguageModelParallelBackoff::GetValue(const std::vector<const Word*> &contextFactor, State* finalState, unsigned int* len) const
+	float LanguageModelParallelBackoff::GetValue(const std::vector<const Word*> &contextFactor, FFState &outState, unsigned int* len) const
 	{
 
     static WidMatrix widMatrix;		

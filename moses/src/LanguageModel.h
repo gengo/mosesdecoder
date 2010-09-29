@@ -92,10 +92,7 @@ public:
 	 * \param state LM state.  Input and output.  state must be initialized.  If state isn't initialized, you want GetValueWithoutState.
 	 * \param len If non-null, the n-gram length is written here.  
 	 */
-	virtual float GetValueGivenState(
-      const std::vector<const Word*> &contextFactor,
-			FFState &state,
-			unsigned int* len = 0) const;
+	virtual float GetValueGivenState(const std::vector<const Word*> &contextFactor, FFState &state, unsigned int* len = 0) const;
 
   // Like GetValueGivenState but state may not be initialized (however it is non-NULL). 
   // For example, state just came from NewState(NULL).   

@@ -177,19 +177,7 @@ void LanguageModel::ShiftOrPush(vector<const Word*> &contextFactor, const Word &
 		contextFactor[m_nGramOrder - 1] = &word;
 	}
 }
-	
-	
-struct LMState : public FFState {
-	const void* lmstate;
-	LMState(const void* lms) { lmstate = lms; }
-	virtual int Compare(const FFState& o) const {
-		const LMState& other = static_cast<const LMState&>(o);
-		if (other.lmstate > lmstate) return 1;
-		else if (other.lmstate < lmstate) return -1;
-		return 0;
-	}
-};
-
+		
 const FFState* LanguageModel::EmptyHypothesisState(const InputType &/*input*/) const {
 	return m_emptyHypothesisState;
 }
