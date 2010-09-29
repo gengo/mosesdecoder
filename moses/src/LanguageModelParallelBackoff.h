@@ -91,7 +91,8 @@ VocabIndex GetLmID( const Factor *factor, FactorType ft ) const;
 
 void CreateFactors();
 	
-float GetValueForgotState(const std::vector<const Word*> &contextFactor, FFState &finalState, unsigned int* len = 0) const;
+float GetValueForgotState(const std::vector<const Word*> &contextFactor, FFState &outState, unsigned int* len = 0) const;
+FFState *NewState(const FFState *from) const;
 	
 };
 
