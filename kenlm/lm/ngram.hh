@@ -49,13 +49,6 @@ class State {
 
 size_t hash_value(const State &state);
 
-// TODO(hieuhoang1972): refactor language models to keep arbitrary state, not a void* pointer.  Then use FullScore like good people do.  For now, you get a stateless interface.  
-struct HieuShouldRefactorMoses {
-  float prob;
-  unsigned char ngram_length;
-  void *meaningless_unique_state;
-};
-
 namespace detail {
 
 // std::identity is an SGI extension :-(
@@ -78,16 +71,25 @@ template <class Search, class VocabularyT> class GenericModel : public base::Mod
 
     FullScoreReturn FullScore(const State &in_state, const WordIndex new_word, State &out_state) const;
 
-    /* Slower but stateless call.  Don't use this if you can avoid it.  This
-     * is mostly a hack for Hieu to integrate it into Moses which is currently
-     * unable to handle arbitrary LM state.  Sigh. 
-     * The word indices should be in an array.  *begin is the earliest word of context.
-     * *(end-1) is the word being appended.  
+    /* Slower call without in_state.  Don't use this if you can avoid it.  This
+     * is mostly a hack for Hieu to integrate it into Moses which sometimes
+     * forgets LM state (i.e. it doesn't store it with the phrase).  Sigh.   
+     * The context indices should be in an array.  
+     * If context_rbegin != context_rend then *context_rbegin is the word
+     * before new_word.  
      */
-    HieuShouldRefactorMoses SlowStatelessScore(const WordIndex *begin, const WordIndex *end) const;
+    FullScoreReturn FullScoreForgotState(const WordIndex *context_rbegin, const WordIndex *context_rend, const WordIndex new_word, State &out_state) const;
+
+    /* Get the state for a context.  Don't use this if you can avoid it.  Use
+     * BeginSentenceState or EmptyContextState and extend from those.  If
+     * you're only going to use this state to call FullScore once, use
+     * FullScoreForgotState. */
+    void GetState(const WordIndex *context_rbegin, const WordIndex *context_rend, State &out_state) const;
 
   private:
-    float SlowBackoffLookup(const WordIndex *const begin, const WordIndex *const end, unsigned char start) const;
+    float SlowBackoffLookup(const WordIndex *const context_rbegin, const WordIndex *const context_rend, unsigned char start) const;
+
+    FullScoreReturn ScoreExceptBackoff(const WordIndex *context_rbegin, const WordIndex *context_rend, const WordIndex new_word, unsigned char &backoff_start, State &out_state) const;
 
     // Appears after Size in the cc file.
     void SetupMemory(char *start, const std::vector<size_t> &counts, const Config &config);

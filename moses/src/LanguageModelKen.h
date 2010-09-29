@@ -25,10 +25,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <string>
 #include <vector>
 #include "Factor.h"
+#include "FFState.h"
 #include "TypeDef.h"
 #include "Util.h"
 #include "LanguageModelSingleFactor.h"
-#include "../../kenlm/lm/ngram.hh"
+#include "lm/ngram.hh"
 
 namespace Moses
 {
@@ -38,7 +39,7 @@ class Phrase;
 */
 class LanguageModelKen : public LanguageModelSingleFactor
 {
-protected:
+private:
   lm::ngram::Model *m_ngram;
 	
 public:
@@ -48,7 +49,10 @@ public:
 					, FactorType factorType
 					, size_t nGramOrder);
 
-  virtual float GetValue(const std::vector<const Word*> &contextFactor, State* finalState = NULL, unsigned int* len=0) const;
+  float GetValueAndState(const std::vector<const Word*> &contextFactor, FFState &outState, unsigned int* len=0) const;
+
+  FFState *NewState(const FFState *from = NULL);
+
   lm::WordIndex GetLmID(const std::string &str) const;
 
   void CleanUpAfterSentenceProcessing() {}

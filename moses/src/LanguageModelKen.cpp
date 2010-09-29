@@ -20,9 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
 #include <cassert>
-#include <limits>
-#include <iostream>
-#include <fstream>
+#include <cstring>
 #include "lm/ngram.hh"
 
 #include "LanguageModelKen.h"
@@ -38,6 +36,18 @@ using namespace std;
 namespace Moses
 {
 
+namespace {
+struct KenLMState : public FFState {
+  lm::ngram::State state;
+  int Compare(const FFState &o) const {
+    const KenLMState &other = static_cast<const KenLMState &>(o);
+    if (state.valid_length_ < other.state.valid_length_) return -1;
+    if (state.valid_length_ > other.state.valid_length_) return 1;
+    return std::memcmp(state.history_, other.state.history_, sizeof(lm::WordIndex) * state.valid_length_);
+  }
+};
+} // namespace
+
 LanguageModelKen::LanguageModelKen(bool registerScore, ScoreIndexManager &scoreIndexManager)
 :LanguageModelSingleFactor(registerScore, scoreIndexManager), m_ngram(NULL)
 {
@@ -48,12 +58,10 @@ LanguageModelKen::~LanguageModelKen()
 	delete m_ngram;
 }
 
-
 bool LanguageModelKen::Load(const std::string &filePath, 
 			     FactorType factorType, 
-			     size_t nGramOrder)
+			     size_t /*nGramOrder*/)
 {
-	cerr << "In LanguageModelKen::Load: nGramOrder = " << nGramOrder << " will be ignored.  Using whatever the file has.\n";
 	m_ngram = new lm::ngram::Model(filePath.c_str());
 
 	m_factorType  = factorType;
@@ -65,6 +73,13 @@ bool LanguageModelKen::Load(const std::string &filePath,
 	m_sentenceStartArray[m_factorType] = m_sentenceStart;
 	m_sentenceEnd = factorCollection.AddFactor(Output, m_factorType, EOS_);
 	m_sentenceEndArray[m_factorType] = m_sentenceEnd;
+
+  KenLMState *tmp = new KenLMState();
+  tmp->state = m_ngram->NullContextState();
+  m_emptyHypothesisState = tmp;
+  tmp = new KenLMState();
+  tmp->state = m_ngram->BeginSentenceState();
+  m_beginSentenceState = tmp;
 	return true;
 }
 
@@ -74,14 +89,14 @@ bool LanguageModelKen::Load(const std::string &filePath,
 	 * \param finalState state used by LM. Return arg
 	 * \param len ???
 	 */	
-float LanguageModelKen::GetValue(const vector<const Word*> &contextFactor, State* finalState, unsigned int* len) const
+float LanguageModelKen::GetValueAndState(const vector<const Word*> &contextFactor, FFState &outState, unsigned int* len) const
 {
 	FactorType factorType = GetFactorType();
 	size_t count = contextFactor.size();
 	assert(count <= GetNGramOrder());
 	if (count == 0)
 	{
-		finalState = NULL;
+		static_cast<KenLMState&>(outState).state = m_ngram->NullContextState();
 		return 0;
 	}
 	
@@ -93,15 +108,10 @@ float LanguageModelKen::GetValue(const vector<const Word*> &contextFactor, State
 		const string &word = factor->GetString();
 		
 		// TODO(hieuhoang1972): precompute this.   
-		ngramId[i] = m_ngram->GetVocabulary().Index(word);
+		ngramId[count - 1 - i] = m_ngram->GetVocabulary().Index(word);
 	}
 
-	// TODO(hieuhoang1972): use my stateful interface instead of this stateless one you asked heafield to kludge for you.  
-	lm::ngram::HieuShouldRefactorMoses ret(m_ngram->SlowStatelessScore(&*ngramId.begin(), &*ngramId.end()));
-	if (finalState)
-	{
-		*finalState = ret.meaningless_unique_state;
-	}
+  lm::FullScoreReturn ret(m_ngram->FullScoreForgotState(&*ngramId.begin() + 1, &*ngramId.end(), ngramId.front(), static_cast<KenLMState&>(outState).state));
 	if (len)
 	{
 		*len = ret.ngram_length;

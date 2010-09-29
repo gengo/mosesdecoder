@@ -41,8 +41,6 @@ protected:
 	LanguageModelSingleFactor(bool registerScore, ScoreIndexManager &scoreIndexManager);
 
 public:
-  static State UnknownState;
-
 	virtual ~LanguageModelSingleFactor();
 	virtual bool Load(const std::string &filePath
 					, FactorType factorType

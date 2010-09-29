@@ -35,8 +35,6 @@ using namespace std;
 
 namespace Moses
 {
-// static variable init
-LanguageModelSingleFactor::State LanguageModelSingleFactor::UnknownState=0;
 
 LanguageModelSingleFactor::LanguageModelSingleFactor(bool registerScore, ScoreIndexManager &scoreIndexManager)
 :LanguageModel(registerScore, scoreIndexManager)
