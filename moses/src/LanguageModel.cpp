@@ -179,7 +179,7 @@ void LanguageModel::ShiftOrPush(vector<const Word*> &contextFactor, const Word &
 }
 		
 const FFState* LanguageModel::EmptyHypothesisState(const InputType &/*input*/) const {
-	return m_emptyHypothesisState;
+	return NewState(m_emptyHypothesisState);
 }
 
 FFState* LanguageModel::Evaluate(
