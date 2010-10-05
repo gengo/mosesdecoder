@@ -84,7 +84,11 @@ void LanguageModel::CalcScore(const Phrase &phrase
 		
 		if (word.IsNonTerminal())
 		{ // do nothing. reset ngram. needed to score targbet phrases during pt loading in chart decoding
-			contextFactor.clear();
+      if (!contextFactor.empty()) {
+        // TODO: state operator= ?
+        state.reset(NewState(m_emptyHypothesisState));
+			  contextFactor.clear();
+      }
 		}
 		else
 		{
@@ -210,12 +214,11 @@ FFState* LanguageModel::Evaluate(
 		else
     {
 			contextFactor[index++] = &GetSentenceStartArray();
-      ps = m_beginSentenceState;
     }
 	}
-  FFState *res = NewState(ps);
-  float lmScore = ps ? GetValueGivenState(contextFactor, *res) : GetValueForgotState(contextFactor, *res);
-	//cout<<"context factor: "<<GetValue(contextFactor)<<endl;
+  // TODO: figure out when we can use hypothesis state here.  It's not straightforward.  
+  FFState *res = NewState(NULL);
+  float lmScore = GetValueForgotState(contextFactor, *res);
 
 	// main loop
 	size_t endPos = std::min(startPos + m_nGramOrder - 2
