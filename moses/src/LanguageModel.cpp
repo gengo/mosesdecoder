@@ -42,12 +42,13 @@ LanguageModel::LanguageModel(bool registerScore, ScoreIndexManager &scoreIndexMa
 {
 	if (registerScore)
 		scoreIndexManager.AddScoreProducer(this);
-  m_emptyHypothesisState = NULL;
-  m_beginSentenceState = NULL;
+	m_emptyHypothesisState = NULL;
+	m_beginSentenceState = NULL;
 }
-LanguageModel::~LanguageModel() {
-  delete m_emptyHypothesisState;
-  delete m_beginSentenceState;
+LanguageModel::~LanguageModel()
+{
+	delete m_emptyHypothesisState;
+	delete m_beginSentenceState;
 }
 
 // don't inline virtual funcs...
@@ -58,9 +59,9 @@ size_t LanguageModel::GetNumScoreComponents() const
 
 
 float LanguageModel::GetWeight() const {
-    size_t lmIndex = StaticData::Instance().GetScoreIndexManager().
-          GetBeginIndex(GetScoreBookkeepingID());
-    return StaticData::Instance().GetAllWeights()[lmIndex];
+	size_t lmIndex = StaticData::Instance().GetScoreIndexManager().
+        	GetBeginIndex(GetScoreBookkeepingID());
+	return StaticData::Instance().GetAllWeights()[lmIndex];
 }
 
 void LanguageModel::CalcScore(const Phrase &phrase
@@ -72,11 +73,11 @@ void LanguageModel::CalcScore(const Phrase &phrase
 	ngramScore	= 0;
 	
 	size_t phraseSize = phrase.GetSize();
-  if (!phraseSize) return;
+  	if (!phraseSize) return;
 	
 	vector<const Word*> contextFactor;
 	contextFactor.reserve(m_nGramOrder);
-  std::auto_ptr<FFState> state(NewState((phrase.GetWord(0) == GetSentenceStartArray()) ? m_beginSentenceState : m_emptyHypothesisState));
+	std::auto_ptr<FFState> state(NewState((phrase.GetWord(0) == GetSentenceStartArray()) ? m_beginSentenceState : m_emptyHypothesisState));
 	size_t currPos = 0;
 	while (currPos < phraseSize)
 	{
@@ -84,11 +85,11 @@ void LanguageModel::CalcScore(const Phrase &phrase
 		
 		if (word.IsNonTerminal())
 		{ // do nothing. reset ngram. needed to score targbet phrases during pt loading in chart decoding
-      if (!contextFactor.empty()) {
-        // TODO: state operator= ?
-        state.reset(NewState(m_emptyHypothesisState));
-			  contextFactor.clear();
-      }
+			if (!contextFactor.empty()) {
+				// TODO: state operator= ?
+				state.reset(NewState(m_emptyHypothesisState));
+				contextFactor.clear();
+			}
 		}
 		else
 		{
@@ -121,11 +122,11 @@ void LanguageModel::CalcScoreChart(const Phrase &phrase
 	ngramScore	= 0;
 	
 	size_t phraseSize = phrase.GetSize();
-  if (!phraseSize) return;
+	if (!phraseSize) return;
 	
 	vector<const Word*> contextFactor;
 	contextFactor.reserve(m_nGramOrder);
-  std::auto_ptr<FFState> state(NewState((phrase.GetWord(0) == GetSentenceStartArray()) ? m_beginSentenceState : m_emptyHypothesisState));
+	std::auto_ptr<FFState> state(NewState((phrase.GetWord(0) == GetSentenceStartArray()) ? m_beginSentenceState : m_emptyHypothesisState));
 	size_t currPos = 0;
 	while (currPos < phraseSize)
 	{
@@ -154,16 +155,18 @@ void LanguageModel::CalcScoreChart(const Phrase &phrase
 }
 
 float LanguageModel::GetValueGivenState(
-    const std::vector<const Word*> &contextFactor,
-    FFState &state,
-    unsigned int* len) const {
-  return GetValueForgotState(contextFactor, state, len);
+	const std::vector<const Word*> &contextFactor,
+	FFState &state,
+	unsigned int* len) const
+{
+	return GetValueForgotState(contextFactor, state, len);
 }
 
 void LanguageModel::GetState(
-    const std::vector<const Word*> &contextFactor,
-    FFState &state) const {
-  GetValueForgotState(contextFactor, state, NULL);
+	const std::vector<const Word*> &contextFactor,
+	FFState &state) const
+{
+	GetValueForgotState(contextFactor, state, NULL);
 }
 	
 void LanguageModel::ShiftOrPush(vector<const Word*> &contextFactor, const Word &word) const
@@ -212,13 +215,13 @@ FFState* LanguageModel::Evaluate(
 		if (currPos >= 0)
 			contextFactor[index++] = &hypo.GetWord(currPos);
 		else
-    {
+		{
 			contextFactor[index++] = &GetSentenceStartArray();
-    }
+		}
 	}
-  // TODO: figure out when we can use hypothesis state here.  It's not straightforward.  
-  FFState *res = NewState(NULL);
-  float lmScore = GetValueForgotState(contextFactor, *res);
+  	// TODO: figure out when we can use hypothesis state here.  It's not straightforward.  
+  	FFState *res = NewState(NULL);
+	float lmScore = GetValueForgotState(contextFactor, *res);
 
 	// main loop
 	size_t endPos = std::min(startPos + m_nGramOrder - 2
@@ -259,7 +262,7 @@ FFState* LanguageModel::Evaluate(
 		GetState(contextFactor, *res);
 	}
 	out->PlusEquals(this, lmScore);
-  IFVERBOSE(2) { hypo.GetManager().GetSentenceStats().AddTimeCalcLM( clock()-t ); }
+	IFVERBOSE(2) { hypo.GetManager().GetSentenceStats().AddTimeCalcLM( clock()-t ); }
 	return res;
 }
 
