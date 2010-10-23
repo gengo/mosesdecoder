@@ -5,6 +5,10 @@ AM_CPPFLAGS = -W -Wall -ffor-scope -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES $(BOOST
 libkenlm_a_SOURCES = \
 	lm/lm_exception.cc \
 	lm/ngram.cc \
+	lm/ngram_hashed.cc \
+	lm/ngram_trie.cc \
+	lm/trie.cc \
+	lm/binary_format.cc \
 	lm/read_arpa.cc \
 	lm/virtual_interface.cc \
 	lm/vocab.cc \
@@ -15,7 +19,8 @@ libkenlm_a_SOURCES = \
 	util/file_piece.cc   \
 	util/ersatz_progress.cc   \
 	util/exception.cc   \
-	util/string_piece.cc
+	util/string_piece.cc \
+	util/bit_packing.cc 
 
 query_SOURCES = lm/ngram_query.cc
 query_DEPENDENCIES = libkenlm.a

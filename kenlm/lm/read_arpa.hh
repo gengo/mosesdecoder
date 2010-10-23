@@ -2,20 +2,26 @@
 #define LM_READ_ARPA__
 
 #include "lm/lm_exception.hh"
-#include "lm/weights.hh"
 #include "lm/word_index.hh"
+#include "lm/weights.hh"
 #include "util/file_piece.hh"
 
 #include <cstddef>
+#include <iosfwd>
 #include <vector>
 
 namespace lm {
 
-void ReadARPACounts(util::FilePiece &in, std::vector<std::size_t> &number);
+void ReadARPACounts(util::FilePiece &in, std::vector<uint64_t> &number);
+void ReadARPACounts(std::istream &in, std::vector<uint64_t> &number);
 void ReadNGramHeader(util::FilePiece &in, unsigned int length);
+void ReadNGramHeader(std::istream &in, unsigned int length);
 
-void ReadBackoff(util::FilePiece &f, Prob &weights);
-void ReadBackoff(util::FilePiece &f, ProbBackoff &weights);
+void ReadBackoff(util::FilePiece &in, Prob &weights);
+void ReadBackoff(util::FilePiece &in, ProbBackoff &weights);
+
+void ReadEnd(util::FilePiece &in);
+void ReadEnd(std::istream &in);
 
 template <class Voc> void Read1Gram(util::FilePiece &f, Voc &vocab, ProbBackoff *unigrams) {
   try {

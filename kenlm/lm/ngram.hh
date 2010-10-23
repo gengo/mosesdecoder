@@ -1,16 +1,13 @@
 #ifndef LM_NGRAM__
 #define LM_NGRAM__
 
+#include "lm/binary_format.hh"
 #include "lm/facade.hh"
 #include "lm/ngram_config.hh"
+#include "lm/ngram_hashed.hh"
+#include "lm/ngram_trie.hh"
 #include "lm/vocab.hh"
 #include "lm/weights.hh"
-#include "util/key_value_packing.hh"
-#include "util/mmap.hh"
-#include "util/probing_hash_table.hh"
-#include "util/scoped.hh"
-#include "util/sorted_uniform.hh"
-#include "util/string_piece.hh"
 
 #include <algorithm>
 #include <vector>
@@ -51,11 +48,6 @@ size_t hash_value(const State &state);
 
 namespace detail {
 
-// std::identity is an SGI extension :-(
-struct IdentityHash : public std::unary_function<uint64_t, size_t> {
-  size_t operator()(uint64_t arg) const { return static_cast<size_t>(arg); }
-};
-
 // Should return the same results as SRI.  
 // Why VocabularyT instead of just Vocabulary?  ModelFacade defines Vocabulary.  
 template <class Search, class VocabularyT> class GenericModel : public base::ModelFacade<GenericModel<Search, VocabularyT>, State, VocabularyT> {
@@ -65,9 +57,9 @@ template <class Search, class VocabularyT> class GenericModel : public base::Mod
     // Get the size of memory that will be mapped given ngram counts.  This
     // does not include small non-mapped control structures, such as this class
     // itself.  
-    static size_t Size(const std::vector<size_t> &counts, const Config &config = Config());
+    static size_t Size(const std::vector<uint64_t> &counts, const Config &config = Config());
 
-    GenericModel(const char *file, Config config = Config());
+    GenericModel(const char *file, const Config &config = Config());
 
     FullScoreReturn FullScore(const State &in_state, const WordIndex new_word, State &out_state) const;
 
@@ -87,62 +79,44 @@ template <class Search, class VocabularyT> class GenericModel : public base::Mod
     void GetState(const WordIndex *context_rbegin, const WordIndex *context_rend, State &out_state) const;
 
   private:
+    friend void LoadLM<>(const char *file, const Config &config, GenericModel<Search, VocabularyT> &to);
+
     float SlowBackoffLookup(const WordIndex *const context_rbegin, const WordIndex *const context_rend, unsigned char start) const;
 
     FullScoreReturn ScoreExceptBackoff(const WordIndex *context_rbegin, const WordIndex *context_rend, const WordIndex new_word, unsigned char &backoff_start, State &out_state) const;
 
     // Appears after Size in the cc file.
-    void SetupMemory(char *start, const std::vector<size_t> &counts, const Config &config);
+    void SetupMemory(void *start, const std::vector<uint64_t> &counts, const Config &config);
 
-    void LoadFromARPA(util::FilePiece &f, const std::vector<size_t> &counts, const Config &config);
+    void InitializeFromBinary(void *start, const Parameters &params, const Config &config);
 
-    util::scoped_fd mapped_file_;
+    void InitializeFromARPA(const char *file, util::FilePiece &f, void *start, const Parameters &params, const Config &config);
 
-    // memory_ is the raw block of memory backing vocab_, unigram_, [middle.begin(), middle.end()), and longest_.  
-    util::scoped_mmap memory_;
+    Backing &MutableBacking() { return backing_; }
+
+    static const ModelType kModelType = Search::kModelType;
+
+    Backing backing_;
     
     VocabularyT vocab_;
 
-    ProbBackoff *unigram_;
+    typedef typename Search::Unigram Unigram;
+    typedef typename Search::Middle Middle;
+    typedef typename Search::Longest Longest;
 
-    typedef typename Search::template Table<ProbBackoff>::T Middle;
-    std::vector<Middle> middle_;
-
-    typedef typename Search::template Table<Prob>::T Longest;
-    Longest longest_;
-};
-
-struct ProbingSearch {
-  typedef float Init;
-
-  static const unsigned char kBinaryTag = 1;
-
-  template <class Value> struct Table {
-    typedef util::ByteAlignedPacking<uint64_t, Value> Packing;
-    typedef util::ProbingHashTable<Packing, IdentityHash> T;
-  };
-};
-
-struct SortedUniformSearch {
-  // This is ignored.
-  typedef float Init;
-
-  static const unsigned char kBinaryTag = 2;
-
-  template <class Value> struct Table {
-    typedef util::ByteAlignedPacking<uint64_t, Value> Packing;
-    typedef util::SortedUniformMap<Packing> T;
-  };
+    Search search_;
 };
 
 } // namespace detail
 
 // These must also be instantiated in the cc file.  
 typedef ::lm::ProbingVocabulary Vocabulary;
-typedef detail::GenericModel<detail::ProbingSearch, Vocabulary> Model;
+typedef detail::GenericModel<detail::ProbingHashedSearch, Vocabulary> Model;
 
 typedef ::lm::SortedVocabulary SortedVocabulary;
-typedef detail::GenericModel<detail::SortedUniformSearch, SortedVocabulary> SortedModel;
+typedef detail::GenericModel<detail::SortedHashedSearch, SortedVocabulary> SortedModel;
+
+typedef detail::GenericModel<trie::TrieSearch, SortedVocabulary> TrieModel;
 
 } // namespace ngram
 } // namespace lm

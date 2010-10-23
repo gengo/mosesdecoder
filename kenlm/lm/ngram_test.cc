@@ -104,16 +104,36 @@ template <class M> void Stateless(const M &model) {
   // not found
   StatelessTest(7, 1, 0, -2.29666);
   StatelessTest(7, 0, 0, -1.995635);
+
+  WordIndex unk[1];
+  unk[0] = 0;
+  model.GetState(unk, unk + 1, state);
+  BOOST_CHECK_EQUAL(0, state.valid_length_);
 }
 
 BOOST_AUTO_TEST_CASE(probing) {
-  Model m("test.arpa");
+  Config config;
+  config.arpa_complain = Config::NONE;
+  config.messages = NULL;
+  Model m("test.arpa", config);
   Starters(m);
   Continuation(m);
   Stateless(m);
 }
 BOOST_AUTO_TEST_CASE(sorted) {
-  SortedModel m("test.arpa");
+  Config config;
+  config.arpa_complain = Config::NONE;
+  config.messages = NULL;
+  SortedModel m("test.arpa", config);
+  Starters(m);
+  Continuation(m);
+  Stateless(m);
+}
+BOOST_AUTO_TEST_CASE(trie) {
+  Config config;
+  config.arpa_complain = Config::NONE;
+  config.messages = NULL;
+  TrieModel m("test.arpa", config);
   Starters(m);
   Continuation(m);
   Stateless(m);
@@ -122,6 +142,7 @@ BOOST_AUTO_TEST_CASE(sorted) {
 BOOST_AUTO_TEST_CASE(write_and_read_probing) {
   Config config;
   config.write_mmap = "test.binary";
+  config.messages = NULL;
   {
     Model copy_model("test.arpa", config);
   }
@@ -129,12 +150,13 @@ BOOST_AUTO_TEST_CASE(write_and_read_probing) {
   Starters(binary);
   Continuation(binary);
   Stateless(binary);
+  unlink("test.binary");
 }
 
 BOOST_AUTO_TEST_CASE(write_and_read_sorted) {
   Config config;
   config.write_mmap = "test.binary";
-  config.prefault = true;
+  config.messages = NULL;
   {
     SortedModel copy_model("test.arpa", config);
   }
@@ -142,8 +164,21 @@ BOOST_AUTO_TEST_CASE(write_and_read_sorted) {
   Starters(binary);
   Continuation(binary);
   Stateless(binary);
+  unlink("test.binary");
 }
-
+BOOST_AUTO_TEST_CASE(write_and_read_trie) {
+  Config config;
+  config.write_mmap = "test.binary";
+  config.messages = NULL;
+  {
+    TrieModel copy_model("test.arpa", config);
+  }
+  TrieModel binary("test.binary");
+  Starters(binary);
+  Continuation(binary);
+  Stateless(binary);
+  unlink("test.binary");
+}
 
 } // namespace
 } // namespace ngram

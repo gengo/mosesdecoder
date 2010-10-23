@@ -219,8 +219,8 @@ FFState* LanguageModel::Evaluate(
 			contextFactor[index++] = &GetSentenceStartArray();
 		}
 	}
-  	// TODO: figure out when we can use hypothesis state here.  It's not straightforward.  
-  	FFState *res = NewState(NULL);
+  // TODO: figure out when we can use hypothesis state here.  It's not straightforward.  
+  FFState *res = NewState(NULL);
 	float lmScore = GetValueForgotState(contextFactor, *res);
 
 	// main loop

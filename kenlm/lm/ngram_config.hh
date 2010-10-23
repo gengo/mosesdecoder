@@ -8,14 +8,15 @@
 namespace lm { namespace ngram {
 
 struct Config {
-  /* EFFECTIVE FOR BOTH ARPA AND BINARY READS */
+  // EFFECTIVE FOR BOTH ARPA AND BINARY READS 
+
   // Where to log messages including the progress bar.  Set to NULL for
   // silence.
   std::ostream *messages;
 
 
 
-  /* ONLY EFFECTIVE WHEN READING ARPA */
+  // ONLY EFFECTIVE WHEN READING ARPA
 
   // What to do when <unk> isn't in the provided model. 
   typedef enum {THROW_UP, COMPLAIN, SILENT} UnknownMissing;
@@ -32,13 +33,28 @@ struct Config {
   // Sorted version instead which has lower memory consumption.  
   float probing_multiplier;
 
+  // Amount of memory to use for building.  The actual memory usage will be
+  // higher since this just sets sort buffer size.  Only applies to trie
+  // models.
+  std::size_t building_memory;
+
+  // Template for temporary directory appropriate for passing to mkdtemp.  
+  // The characters XXXXXX are appended before passing to mkdtemp.  Only
+  // applies to trie.  If NULL, defaults to write_mmap.  If that's NULL,
+  // defaults to input file name.  
+  const char *temporary_directory_prefix;
+
+  // Level of complaining to do when an ARPA instead of a binary format.
+  typedef enum {ALL, EXPENSIVE, NONE} ARPALoadComplain;
+  ARPALoadComplain arpa_complain;
+
   // While loading an ARPA file, also write out this binary format file.  Set
   // to NULL to disable.  
   const char *write_mmap;
 
   
 
-  /* ONLY EFFECTIVE WHEN READING BINARY */
+  // ONLY EFFECTIVE WHEN READING BINARY
   bool prefault;
 
 
@@ -49,6 +65,9 @@ struct Config {
     unknown_missing(COMPLAIN),
     unknown_missing_prob(0.0),
     probing_multiplier(1.5),
+    building_memory(1073741824ULL), // 1 GB
+    temporary_directory_prefix(NULL),
+    arpa_complain(ALL),
     write_mmap(NULL),
     prefault(false) {}
 };
