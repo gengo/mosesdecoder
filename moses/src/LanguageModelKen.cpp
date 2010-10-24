@@ -149,8 +149,6 @@ FFState *LanguageModelKen::NewState(const FFState *from) const {
   KenLMState *ret = new KenLMState;
   if (from) {
     ret->state = static_cast<const KenLMState&>(*from).state;
-  } else {
-    ret->state.valid_length_ = 255;
   }
   return ret;
 }
