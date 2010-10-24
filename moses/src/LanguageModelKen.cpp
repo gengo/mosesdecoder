@@ -105,7 +105,6 @@ float LanguageModelKen::GetValueGivenState(const std::vector<const Word*> &conte
     return 0;
   }
   lm::ngram::State &realState = static_cast<KenLMState&>(state).state;
-  if (realState.valid_length_ == 255) abort();
   lm::WordIndex new_word = m_ngram->GetVocabulary().Index(contextFactor.back()->GetFactor(GetFactorType())->GetString());
   lm::ngram::State copied(realState);
   lm::FullScoreReturn ret(m_ngram->FullScore(copied, new_word, realState));
