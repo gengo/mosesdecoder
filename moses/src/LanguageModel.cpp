@@ -186,7 +186,7 @@ void LanguageModel::ShiftOrPush(vector<const Word*> &contextFactor, const Word &
 }
 		
 const FFState* LanguageModel::EmptyHypothesisState(const InputType &/*input*/) const {
-	return NewState(m_emptyHypothesisState);
+	return NewState(m_beginSentenceState);
 }
 
 FFState* LanguageModel::Evaluate(
@@ -219,9 +219,8 @@ FFState* LanguageModel::Evaluate(
 			contextFactor[index++] = &GetSentenceStartArray();
 		}
 	}
-  // TODO: figure out when we can use hypothesis state here.  It's not straightforward.  
-  FFState *res = NewState(NULL);
-	float lmScore = GetValueForgotState(contextFactor, *res);
+  FFState *res = NewState(ps);
+	float lmScore = ps ? GetValueGivenState(contextFactor, *res) : GetValueForgotState(contextFactor, *res);
 
 	// main loop
 	size_t endPos = std::min(startPos + m_nGramOrder - 2
