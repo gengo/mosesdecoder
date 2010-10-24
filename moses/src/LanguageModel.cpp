@@ -42,12 +42,12 @@ LanguageModel::LanguageModel(bool registerScore, ScoreIndexManager &scoreIndexMa
 {
 	if (registerScore)
 		scoreIndexManager.AddScoreProducer(this);
-	m_emptyHypothesisState = NULL;
+	m_nullContextState = NULL;
 	m_beginSentenceState = NULL;
 }
 LanguageModel::~LanguageModel()
 {
-	delete m_emptyHypothesisState;
+	delete m_nullContextState;
 	delete m_beginSentenceState;
 }
 
@@ -77,7 +77,7 @@ void LanguageModel::CalcScore(const Phrase &phrase
 	
 	vector<const Word*> contextFactor;
 	contextFactor.reserve(m_nGramOrder);
-	std::auto_ptr<FFState> state(NewState((phrase.GetWord(0) == GetSentenceStartArray()) ? m_beginSentenceState : m_emptyHypothesisState));
+	std::auto_ptr<FFState> state(NewState((phrase.GetWord(0) == GetSentenceStartArray()) ? m_beginSentenceState : m_nullContextState));
 	size_t currPos = 0;
 	while (currPos < phraseSize)
 	{
@@ -87,7 +87,7 @@ void LanguageModel::CalcScore(const Phrase &phrase
 		{ // do nothing. reset ngram. needed to score targbet phrases during pt loading in chart decoding
 			if (!contextFactor.empty()) {
 				// TODO: state operator= ?
-				state.reset(NewState(m_emptyHypothesisState));
+				state.reset(NewState(m_nullContextState));
 				contextFactor.clear();
 			}
 		}
@@ -126,7 +126,7 @@ void LanguageModel::CalcScoreChart(const Phrase &phrase
 	
 	vector<const Word*> contextFactor;
 	contextFactor.reserve(m_nGramOrder);
-	std::auto_ptr<FFState> state(NewState((phrase.GetWord(0) == GetSentenceStartArray()) ? m_beginSentenceState : m_emptyHypothesisState));
+	std::auto_ptr<FFState> state(NewState((phrase.GetWord(0) == GetSentenceStartArray()) ? m_beginSentenceState : m_nullContextState));
 	size_t currPos = 0;
 	while (currPos < phraseSize)
 	{
@@ -186,6 +186,7 @@ void LanguageModel::ShiftOrPush(vector<const Word*> &contextFactor, const Word &
 }
 		
 const FFState* LanguageModel::EmptyHypothesisState(const InputType &/*input*/) const {
+	// This is actually correct.  The empty _hypothesis_ has <s> in it.  Phrases use m_emptyContextState.  
 	return NewState(m_beginSentenceState);
 }
 
@@ -219,7 +220,7 @@ FFState* LanguageModel::Evaluate(
 			contextFactor[index++] = &GetSentenceStartArray();
 		}
 	}
-  FFState *res = NewState(ps);
+	FFState *res = NewState(ps);
 	float lmScore = ps ? GetValueGivenState(contextFactor, *res) : GetValueForgotState(contextFactor, *res);
 
 	// main loop

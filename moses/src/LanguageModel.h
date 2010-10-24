@@ -45,7 +45,7 @@ protected:
 	size_t			m_nGramOrder; //! max n-gram length contained in this LM
 	Word m_sentenceStartArray, m_sentenceEndArray; //! Contains factors which represents the beging and end words for this LM. 
 																								//! Usually <s> and </s>
-  FFState *m_emptyHypothesisState, *m_beginSentenceState;
+  FFState *m_nullContextState, *m_beginSentenceState;
 
 	void ShiftOrPush(std::vector<const Word*> &contextFactor, const Word &word) const;
 

@@ -40,9 +40,9 @@ class Phrase;
 class LanguageModelKen : public LanguageModelSingleFactor
 {
 private:
-  lm::ngram::Model *m_ngram;
+	lm::ngram::Model *m_ngram;
 
-  void TranslateIDs(const std::vector<const Word*> &contextFactor, std::vector<lm::WordIndex> &indices) const;
+	void TranslateIDs(const std::vector<const Word*> &contextFactor, std::vector<lm::WordIndex> &indices) const;
 	
 public:
 	LanguageModelKen(bool registerScore, ScoreIndexManager &scoreIndexManager);
@@ -51,17 +51,16 @@ public:
 					, FactorType factorType
 					, size_t nGramOrder);
 
-  float GetValueGivenState(const std::vector<const Word*> &contextFactor, FFState &state, unsigned int* len = 0) const;
-  float GetValueForgotState(const std::vector<const Word*> &contextFactor, FFState &outState, unsigned int* len=0) const;
-  void GetState(const std::vector<const Word*> &contextFactor, FFState &outState) const;
+	float GetValueGivenState(const std::vector<const Word*> &contextFactor, FFState &state, unsigned int* len = 0) const;
+	float GetValueForgotState(const std::vector<const Word*> &contextFactor, FFState &outState, unsigned int* len=0) const;
+	void GetState(const std::vector<const Word*> &contextFactor, FFState &outState) const;
 
+	FFState *NewState(const FFState *from = NULL) const;
 
-  FFState *NewState(const FFState *from = NULL) const;
+	lm::WordIndex GetLmID(const std::string &str) const;
 
-  lm::WordIndex GetLmID(const std::string &str) const;
-
-  void CleanUpAfterSentenceProcessing() {}
-  void InitializeBeforeSentenceProcessing() {}
+	void CleanUpAfterSentenceProcessing() {}
+	void InitializeBeforeSentenceProcessing() {}
 
 };
 };

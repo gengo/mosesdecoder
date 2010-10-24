@@ -38,20 +38,20 @@ namespace Moses
 
 namespace {
 struct KenLMState : public FFState {
-  lm::ngram::State state;
-  int Compare(const FFState &o) const {
-    const KenLMState &other = static_cast<const KenLMState &>(o);
-    if (state.valid_length_ < other.state.valid_length_) return -1;
-    if (state.valid_length_ > other.state.valid_length_) return 1;
-    return std::memcmp(state.history_, other.state.history_, sizeof(lm::WordIndex) * state.valid_length_);
-  }
+	lm::ngram::State state;
+	int Compare(const FFState &o) const {
+		const KenLMState &other = static_cast<const KenLMState &>(o);
+		if (state.valid_length_ < other.state.valid_length_) return -1;
+		if (state.valid_length_ > other.state.valid_length_) return 1;
+		return std::memcmp(state.history_, other.state.history_, sizeof(lm::WordIndex) * state.valid_length_);
+	}
 };
 } // namespace
 
 void LanguageModelKen::TranslateIDs(const std::vector<const Word*> &contextFactor, std::vector<lm::WordIndex> &indices) const
 {
-  FactorType factorType = GetFactorType();
-  indices.resize(contextFactor.size());
+	FactorType factorType = GetFactorType();
+	indices.resize(contextFactor.size());
 	// set up context
 	for (size_t i = 0 ; i < contextFactor.size(); i++)
 	{
@@ -89,25 +89,25 @@ bool LanguageModelKen::Load(const std::string &filePath,
 	m_sentenceEnd = factorCollection.AddFactor(Output, m_factorType, EOS_);
 	m_sentenceEndArray[m_factorType] = m_sentenceEnd;
 
-  KenLMState *tmp = new KenLMState();
-  tmp->state = m_ngram->NullContextState();
-  m_emptyHypothesisState = tmp;
-  tmp = new KenLMState();
-  tmp->state = m_ngram->BeginSentenceState();
-  m_beginSentenceState = tmp;
+	KenLMState *tmp = new KenLMState();
+	tmp->state = m_ngram->NullContextState();
+	m_nullContextState = tmp;
+	tmp = new KenLMState();
+	tmp->state = m_ngram->BeginSentenceState();
+	m_beginSentenceState = tmp;
 	return true;
 }
 
 float LanguageModelKen::GetValueGivenState(const std::vector<const Word*> &contextFactor, FFState &state, unsigned int* len) const
 {
-  if (contextFactor.empty())
-  {
-    return 0;
-  }
-  lm::ngram::State &realState = static_cast<KenLMState&>(state).state;
-  lm::WordIndex new_word = m_ngram->GetVocabulary().Index(contextFactor.back()->GetFactor(GetFactorType())->GetString());
-  lm::ngram::State copied(realState);
-  lm::FullScoreReturn ret(m_ngram->FullScore(copied, new_word, realState));
+	if (contextFactor.empty())
+	{
+		return 0;
+	}
+	lm::ngram::State &realState = static_cast<KenLMState&>(state).state;
+	lm::WordIndex new_word = m_ngram->GetVocabulary().Index(contextFactor.back()->GetFactor(GetFactorType())->GetString());
+	lm::ngram::State copied(realState);
+	lm::FullScoreReturn ret(m_ngram->FullScore(copied, new_word, realState));
 
 	if (len)
 	{
@@ -125,9 +125,9 @@ float LanguageModelKen::GetValueForgotState(const vector<const Word*> &contextFa
 	}
 	
 	vector<lm::WordIndex> ngramId;
-  TranslateIDs(contextFactor, ngramId);
+	TranslateIDs(contextFactor, ngramId);
 
-  lm::FullScoreReturn ret(m_ngram->FullScoreForgotState(&*ngramId.begin() + 1, &*ngramId.end(), ngramId.front(), static_cast<KenLMState&>(outState).state));
+	lm::FullScoreReturn ret(m_ngram->FullScoreForgotState(&*ngramId.begin() + 1, &*ngramId.end(), ngramId.front(), static_cast<KenLMState&>(outState).state));
 	if (len)
 	{
 		*len = ret.ngram_length;
@@ -136,21 +136,21 @@ float LanguageModelKen::GetValueForgotState(const vector<const Word*> &contextFa
 }
 
 void LanguageModelKen::GetState(const std::vector<const Word*> &contextFactor, FFState &outState) const {
-  if (contextFactor.empty()) {
-    static_cast<KenLMState&>(outState).state = m_ngram->NullContextState();
-    return;
-  }
-  std::vector<lm::WordIndex> indices;
-  TranslateIDs(contextFactor, indices);
-  m_ngram->GetState(&*indices.begin(), &*indices.end(), static_cast<KenLMState&>(outState).state);
+	if (contextFactor.empty()) {
+		static_cast<KenLMState&>(outState).state = m_ngram->NullContextState();
+		return;
+	}
+	std::vector<lm::WordIndex> indices;
+	TranslateIDs(contextFactor, indices);
+	m_ngram->GetState(&*indices.begin(), &*indices.end(), static_cast<KenLMState&>(outState).state);
 }
 
 FFState *LanguageModelKen::NewState(const FFState *from) const {
-  KenLMState *ret = new KenLMState;
-  if (from) {
-    ret->state = static_cast<const KenLMState&>(*from).state;
-  }
-  return ret;
+	KenLMState *ret = new KenLMState;
+	if (from) {
+		ret->state = static_cast<const KenLMState&>(*from).state;
+	}
+	return ret;
 }
 
 lm::WordIndex LanguageModelKen::GetLmID(const std::string &str) const {

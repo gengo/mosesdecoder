@@ -67,7 +67,7 @@ struct PointerState : public FFState {
 LanguageModelPointerState::LanguageModelPointerState(bool registerScore, ScoreIndexManager &scoreIndexManager) 
 : LanguageModelSingleFactor(registerScore, scoreIndexManager)
 {
-m_emptyHypothesisState = new PointerState(NULL);
+m_nullContextState = new PointerState(NULL);
 m_beginSentenceState = new PointerState(NULL);
 }
 
