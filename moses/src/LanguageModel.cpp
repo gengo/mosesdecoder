@@ -252,7 +252,7 @@ FFState* LanguageModel::Evaluate(
 			else
 				contextFactor[i] = &hypo.GetWord((size_t)currPos);
 		}
-		lmScore	+= GetValueGivenState(contextFactor, *res);
+		lmScore	+= GetValueForgotState(contextFactor, *res);
 	} else {
 		for (size_t currPos = endPos+1; currPos <= currEndPos; currPos++) {
 			for (size_t i = 0 ; i < m_nGramOrder - 1 ; i++)
