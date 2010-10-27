@@ -1,11 +1,13 @@
 #ifndef LM_NGRAM_CONFIG__
 #define LM_NGRAM_CONFIG__
 
+#include <iosfwd>
+
 /* Configuration for ngram model.  Separate header to reduce pollution. */
 
-#include <iostream>
-
 namespace lm { namespace ngram {
+
+class EnumerateVocab;
 
 struct Config {
   // EFFECTIVE FOR BOTH ARPA AND BINARY READS 
@@ -13,6 +15,11 @@ struct Config {
   // Where to log messages including the progress bar.  Set to NULL for
   // silence.
   std::ostream *messages;
+
+  // This will be called with every string in the vocabulary.  See
+  // enumerate_vocab.hh for more detail.  Config does not take ownership; you
+  // are still responsible for deleting it (or stack allocating).  
+  EnumerateVocab *enumerate_vocab;
 
 
 
@@ -52,6 +59,9 @@ struct Config {
   // to NULL to disable.  
   const char *write_mmap;
 
+  // Include the vocab in the binary file?  Only effective if write_mmap != NULL.  
+  bool include_vocab;
+
   
 
   // ONLY EFFECTIVE WHEN READING BINARY
@@ -59,17 +69,8 @@ struct Config {
 
 
 
-  // Defaults. 
-  Config() :
-    messages(&std::cerr),
-    unknown_missing(COMPLAIN),
-    unknown_missing_prob(0.0),
-    probing_multiplier(1.5),
-    building_memory(1073741824ULL), // 1 GB
-    temporary_directory_prefix(NULL),
-    arpa_complain(ALL),
-    write_mmap(NULL),
-    prefault(false) {}
+  // Set defaults. 
+  Config();
 };
 
 } /* namespace ngram */ } /* namespace lm */

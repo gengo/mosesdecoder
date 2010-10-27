@@ -4,6 +4,7 @@ bin_PROGRAMS = query build_binary
 AM_CPPFLAGS = -W -Wall -ffor-scope -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES $(BOOST_CPPFLAGS)
 libkenlm_a_SOURCES = \
 	lm/lm_exception.cc \
+	lm/ngram_config.cc \
 	lm/ngram.cc \
 	lm/ngram_hashed.cc \
 	lm/ngram_trie.cc \
