@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <cassert>
 #include <cstring>
+#include "lm/enumerate_vocab.hh"
 #include "lm/ngram.hh"
 
 #include "LanguageModelKen.h"
@@ -37,6 +38,29 @@ namespace Moses
 {
 
 namespace {
+
+class MappingBuilder : public lm::ngram::EnumerateVocab {
+  public:
+    MappingBuilder(FactorType factorType, FactorCollection &factorCollection, std::vector<lm::WordIndex> &mapping) 
+      : m_factorType(factorType), m_factorCollection(factorCollection), m_mapping(mapping) {}
+
+    void Add(lm::WordIndex index, const StringPiece &str) {
+      m_word.assign(str.data(), str.size());
+      std::size_t factorId = m_factorCollection.AddFactor(Output, m_factorType, m_word)->GetId();
+      if (m_mapping.size() <= factorId) {
+        // 0 is <unk> :-)
+        m_mapping.resize(factorId + 1);
+      }
+      m_mapping[factorId] = index;
+    }
+
+  private:
+    std::string m_word;
+    FactorType m_factorType;
+    FactorCollection &m_factorCollection;
+    std::vector<lm::WordIndex> &m_mapping;
+};
+
 struct KenLMState : public FFState {
 	lm::ngram::State state;
 	int Compare(const FFState &o) const {
@@ -48,18 +72,15 @@ struct KenLMState : public FFState {
 };
 } // namespace
 
-void LanguageModelKen::TranslateIDs(const std::vector<const Word*> &contextFactor, std::vector<lm::WordIndex> &indices) const
+void LanguageModelKen::TranslateIDs(const std::vector<const Word*> &contextFactor, lm::WordIndex *indices) const
 {
 	FactorType factorType = GetFactorType();
-	indices.resize(contextFactor.size());
 	// set up context
 	for (size_t i = 0 ; i < contextFactor.size(); i++)
 	{
-		const Factor *factor = contextFactor[i]->GetFactor(factorType);
-		const string &word = factor->GetString();
-		
-		// TODO(hieuhoang1972): precompute this.   
-		indices[contextFactor.size() - 1 - i] = m_ngram->GetVocabulary().Index(word);
+    std::size_t factor = contextFactor[i]->GetFactor(factorType)->GetId();
+    lm::WordIndex new_word = (factor >= m_lmIdLookup.size() ? 0 : m_lmIdLookup[factor]);
+		indices[contextFactor.size() - 1 - i] = new_word;
 	}
 }
 
@@ -77,10 +98,7 @@ bool LanguageModelKen::Load(const std::string &filePath,
 			     FactorType factorType, 
 			     size_t /*nGramOrder*/)
 {
-	m_ngram = new lm::ngram::Model(filePath.c_str());
-
 	m_factorType  = factorType;
-	m_nGramOrder  = m_ngram->Order();
 	m_filePath    = filePath;
 
 	FactorCollection &factorCollection = FactorCollection::Instance();
@@ -88,6 +106,13 @@ bool LanguageModelKen::Load(const std::string &filePath,
 	m_sentenceStartArray[m_factorType] = m_sentenceStart;
 	m_sentenceEnd = factorCollection.AddFactor(Output, m_factorType, EOS_);
 	m_sentenceEndArray[m_factorType] = m_sentenceEnd;
+
+  MappingBuilder builder(m_factorType, factorCollection, m_lmIdLookup);
+  lm::ngram::Config config;
+  config.enumerate_vocab = &builder;
+
+	m_ngram = new lm::ngram::Model(filePath.c_str(), config);
+	m_nGramOrder  = m_ngram->Order();
 
 	KenLMState *tmp = new KenLMState();
 	tmp->state = m_ngram->NullContextState();
@@ -105,7 +130,8 @@ float LanguageModelKen::GetValueGivenState(const std::vector<const Word*> &conte
 		return 0;
 	}
 	lm::ngram::State &realState = static_cast<KenLMState&>(state).state;
-	lm::WordIndex new_word = m_ngram->GetVocabulary().Index(contextFactor.back()->GetFactor(GetFactorType())->GetString());
+  std::size_t factor = contextFactor.back()->GetFactor(GetFactorType())->GetId();
+	lm::WordIndex new_word = (factor >= m_lmIdLookup.size() ? 0 : m_lmIdLookup[factor]);
 	lm::ngram::State copied(realState);
 	lm::FullScoreReturn ret(m_ngram->FullScore(copied, new_word, realState));
 
@@ -124,10 +150,10 @@ float LanguageModelKen::GetValueForgotState(const vector<const Word*> &contextFa
 		return 0;
 	}
 	
-	vector<lm::WordIndex> ngramId;
-	TranslateIDs(contextFactor, ngramId);
+	lm::WordIndex indices[contextFactor.size()];
+	TranslateIDs(contextFactor, indices);
 
-	lm::FullScoreReturn ret(m_ngram->FullScoreForgotState(&*ngramId.begin() + 1, &*ngramId.end(), ngramId.front(), static_cast<KenLMState&>(outState).state));
+	lm::FullScoreReturn ret(m_ngram->FullScoreForgotState(indices + 1, indices + contextFactor.size(), indices[0], static_cast<KenLMState&>(outState).state));
 	if (len)
 	{
 		*len = ret.ngram_length;
@@ -140,9 +166,9 @@ void LanguageModelKen::GetState(const std::vector<const Word*> &contextFactor, F
 		static_cast<KenLMState&>(outState).state = m_ngram->NullContextState();
 		return;
 	}
-	std::vector<lm::WordIndex> indices;
+	lm::WordIndex indices[contextFactor.size()];
 	TranslateIDs(contextFactor, indices);
-	m_ngram->GetState(&*indices.begin(), &*indices.end(), static_cast<KenLMState&>(outState).state);
+	m_ngram->GetState(indices, indices + contextFactor.size(), static_cast<KenLMState&>(outState).state);
 }
 
 FFState *LanguageModelKen::NewState(const FFState *from) const {

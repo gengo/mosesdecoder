@@ -41,8 +41,9 @@ class LanguageModelKen : public LanguageModelSingleFactor
 {
 private:
 	lm::ngram::Model *m_ngram;
+	std::vector<lm::WordIndex> m_lmIdLookup;
 
-	void TranslateIDs(const std::vector<const Word*> &contextFactor, std::vector<lm::WordIndex> &indices) const;
+	void TranslateIDs(const std::vector<const Word*> &contextFactor, lm::WordIndex *indices) const;
 	
 public:
 	LanguageModelKen(bool registerScore, ScoreIndexManager &scoreIndexManager);
