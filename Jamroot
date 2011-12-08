@@ -56,6 +56,9 @@
 #-j$NCPUS to compile in parallel
 #--clean to clean
 
+import option ;
+import modules ;
+
 path-constant TOP : . ;
 
 # Shell with trailing line removed http://lists.boost.org/boost-build/2007/08/17051.php
@@ -67,7 +70,12 @@ rule _shell ( cmd : extras * ) {
   return [ trim-nl [ SHELL $(cmd) : $(extras) ] ] ;
 }
 
-import option ;
+local cleaning = [ option.get "clean" : : yes ] ;
+cleaning ?= [ option.get "clean-all" : no : yes ] ;
+if "clean" in [ modules.peek : ARGV ] {
+  cleaning = yes ;
+}
+constant CLEANING : $(cleaning) ;
 
 #Run g++ with empty main and these arguments to see if it passes.  
 rule test_flags ( flags ) {
@@ -101,12 +109,12 @@ if $(with-boost) {
   boost-include = ;
 }
 
-boost-shell = [ SHELL "g++ "$(I-boost-include)" -dM -x c++ -E /dev/null -include boost/version.hpp |grep '#define BOOST_VERSION '" : exit-status ] ;
-if $(boost-shell[2]) != 0 {
+boost-shell = [ SHELL "g++ "$(I-boost-include)" -dM -x c++ -E /dev/null -include boost/version.hpp 2>/dev/null |grep '#define BOOST_VERSION '" : exit-status ] ;
+if $(boost-shell[2]) != 0 && $(CLEANING) = no {
   exit Boost does not seem to be installed or g++ is confused. : 1 ;
 }
 boost-version = [ MATCH "#define BOOST_VERSION ([0-9]*)" : $(boost-shell[1]) ] ;
-if $(boost-version) < 103600 {
+if $(boost-version) < 103600 && $(cleaning) = no {
   exit You have Boost $(boost-version).  Moses requires at least 103600 (and preferably newer). : 1 ;
 }
 #Are we linking static binaries against shared boost?
@@ -181,7 +189,7 @@ build-project moses-cmd/src ;
 build-project moses-chart-cmd/src ;
 #Scripts have their own binaries.
 build-project scripts ;
-#Regression tests (only enabled if --data-dir is passed)
+#Regression tests (only does anything if --with-regtest is passed)
 build-project regression-testing ;
 
 if [ option.get "git" : : "yes" ] {
